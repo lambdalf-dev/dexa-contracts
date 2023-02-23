@@ -9,9 +9,9 @@ A repository to store the contracts for the Dexa ticketing system
 
 ## Usage
 
-`npx hardhat help` Displays the user manual
-`npx hardhat test` Runs the test suite
-`npx hardhat coverage` Runs the test suite and generates a coverage report
-`npx hardhat flatten <filename> > <filename flattened` Flattens a contract
-`npx hardhat run scripts/deploy.js [--network <network name>]` Runs deployment script for the given network
-`npx hardhat verify <contract address> [--network <network name>]` Verifies the contract at the given address on the given network
+- `npx hardhat help` Displays the user manual
+- `npx hardhat test` Runs the test suite
+- `npx hardhat coverage` Runs the test suite and generates a coverage report
+- `npx hardhat flatten <filename> > <filename flattened` Flattens a contract
+- `npx hardhat run scripts/deploy.js [--network <network name>]` Runs deployment script for the given network
+- `npx hardhat verify <contract address> [--network <network name>]` Verifies the contract at the given address on the given network
