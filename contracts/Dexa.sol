@@ -25,7 +25,7 @@ UpdatableOperatorFilterer, ERC2981, ERC173 {
   // **************************************
   // *****    BYTECODE  VARIABLES     *****
   // **************************************
-		uint256 public constant DEFAULT_SERIES_ID = 1;
+    uint256 public constant DEFAULT_SERIES_ID = 1;
     address public constant DEFAULT_SUBSCRIPTION = address(0x3cc6CddA760b79bAfa08dF41ECFA224f810dCeB6);
     address public constant DEFAULT_OPERATOR_FILTER_REGISTRY = address(0x000000000000AAeB6D7670E522A718067333cd4E);
   // **************************************
@@ -33,17 +33,17 @@ UpdatableOperatorFilterer, ERC2981, ERC173 {
   // **************************************
   // *****     STORAGE VARIABLES      *****
   // **************************************
-		string  private _uri;
+    string  private _uri;
     // List of valid series
     BitMaps.BitMap private _validSeries;
-		// Series ID mapped to balances
-		mapping (uint256 => mapping(address => uint256)) private _balances;
-		// Token owner mapped to operator approvals
-		mapping (address => mapping(address => bool)) private _operatorApprovals;
+    // Series ID mapped to balances
+    mapping (uint256 => mapping(address => uint256)) private _balances;
+    // Token owner mapped to operator approvals
+    mapping (address => mapping(address => bool)) private _operatorApprovals;
     // Series ID mapped to remaining supply
     mapping (uint256 => uint256) public remainingSupplies;
-		// Series ID mapped to minter
-		mapping (uint256 => address) public minters;
+    // Series ID mapped to minter
+    mapping (uint256 => address) public minters;
   // **************************************
 
   // **************************************
@@ -58,153 +58,153 @@ UpdatableOperatorFilterer, ERC2981, ERC173 {
     error DEXA_NON_MINTER(address account, uint256 id);
   // **************************************
 
-	constructor(address treasury_)
-	UpdatableOperatorFilterer(DEFAULT_OPERATOR_FILTER_REGISTRY, DEFAULT_SUBSCRIPTION, true) {
-		_setOwner(msg.sender);
-		_setRoyaltyInfo(treasury_, 500);
-	}
+  constructor(address treasury_)
+  UpdatableOperatorFilterer(DEFAULT_OPERATOR_FILTER_REGISTRY, DEFAULT_SUBSCRIPTION, true) {
+    _setOwner(msg.sender);
+    _setRoyaltyInfo(treasury_, 500);
+  }
 
-	// **************************************
-	// *****          MODIFIER          *****
-	// **************************************
-		/**
-		* @dev Ensures that `id_` is a valid series
-		* 
-		* @param id_ the series id to validate 
-		*/
-		modifier isValidSeries(uint256 id_) {
-			if (! BitMaps.get(_validSeries, id_)) {
-				revert IERC1155_NON_EXISTANT_TOKEN(id_);
-			}
-			_;
-		}
-		/**
-		* @dev Ensures that `sender_` is a registered minter
-		* 
-		* @param sender_ the address to verify
-		*/
-		modifier isMinter(address sender_, uint256 id_) {
-			if (minters[id_] != sender_) {
-				revert DEXA_NON_MINTER(sender_, id_);
-			}
-			_;
-		}
-	// **************************************
+  // **************************************
+  // *****          MODIFIER          *****
+  // **************************************
+    /**
+    * @dev Ensures that `id_` is a valid series
+    * 
+    * @param id_ the series id to validate 
+    */
+    modifier isValidSeries(uint256 id_) {
+      if (! BitMaps.get(_validSeries, id_)) {
+        revert IERC1155_NON_EXISTANT_TOKEN(id_);
+      }
+      _;
+    }
+    /**
+    * @dev Ensures that `sender_` is a registered minter
+    * 
+    * @param sender_ the address to verify
+    */
+    modifier isMinter(address sender_, uint256 id_) {
+      if (minters[id_] != sender_) {
+        revert DEXA_NON_MINTER(sender_, id_);
+      }
+      _;
+    }
+  // **************************************
 
-	// **************************************
-	// *****          INTERNAL          *****
-	// **************************************
-		/**
-		* @dev Internal function that checks if the receiver address is able to handle batches of IERC1155 tokens.
-		* 
-		* @param operator_ address sending the transaction
-		* @param from_ address from where the tokens are sent
-		* @param to_ address receiving the tokens
-		* @param ids_ list of token types being sent
-		* @param amounts_ list of amounts of tokens being sent
-		* @param data_ additional data to accompany the call
-		*/
-		function _doSafeBatchTransferAcceptanceCheck(
-			address operator_,
-			address from_,
-			address to_,
-			uint256[] memory ids_,
-			uint256[] memory amounts_,
-			bytes memory data_
-		) private {
-			uint256 _size_;
-			assembly {
-				_size_ := extcodesize(to_)
-			}
-			if (_size_ > 0) {
-				try IERC1155Receiver(to_).onERC1155BatchReceived(operator_, from_, ids_, amounts_, data_) returns (bytes4 retval) {
-					if (retval != IERC1155Receiver.onERC1155BatchReceived.selector) {
-						revert IERC1155_REJECTED_TRANSFER();
-					}
-				}
-				catch (bytes memory reason) {
-					if (reason.length == 0) {
-						revert IERC1155_REJECTED_TRANSFER();
-					}
-					else {
-						assembly {
-							revert(add(32, reason), mload(reason))
-						}
-					}
-				}
-			}
-		}
-		/**
-		* @dev Internal function that checks if the receiver address is able to handle IERC1155 tokens.
-		* 
-		* @param operator_ address sending the transaction
-		* @param from_ address from where the tokens are sent
-		* @param to_ address receiving the tokens
-		* @param id_ the token type being sent
-		* @param amount_ the amount of tokens being sent
-		* @param data_ additional data to accompany the call
-		*/
-		function _doSafeTransferAcceptanceCheck(
-			address operator_,
-			address from_,
-			address to_,
-			uint256 id_,
-			uint256 amount_,
-			bytes memory data_
-		) private {
-			uint256 _size_;
-			assembly {
-				_size_ := extcodesize(to_)
-			}
-			if (_size_ > 0) {
-				try IERC1155Receiver(to_).onERC1155Received(operator_, from_, id_, amount_, data_) returns (bytes4 retval) {
-					if (retval != IERC1155Receiver.onERC1155Received.selector) {
-						revert IERC1155_REJECTED_TRANSFER();
-					}
-				}
-				catch (bytes memory reason) {
-					if (reason.length == 0) {
-						revert IERC1155_REJECTED_TRANSFER();
-					}
-					else {
-						assembly {
-							revert(add(32, reason), mload(reason))
-						}
-					}
-				}
-			}
-		}
-		/**
-		* @dev Internal function that checks if `operator_` is allowed to manage tokens on behalf of `owner_`
-		* 
-		* @param owner_ address owning the tokens
-		* @param operator_ address to check approval for
-		*/
-		function _isApprovedOrOwner(address owner_, address operator_) internal view returns (bool) {
-			return owner_ == operator_ || isApprovedForAll(owner_, operator_);
-		}
-		/**
-		* @dev Internal function that checks whether `id_` is an existing series.
-		* 
-		* @param id_ the token type being verified
-		*/
-		function _isValidSeries(uint256 id_) internal view returns (bool) {
-			return BitMaps.get(_validSeries, id_);
-		}
-		/**
-		* @dev Internal function that mints `amount_` tokens from series `id_` into `recipient_`.
-		* 
-		* @param recipient_ the address receiving the tokens
-		* @param id_ the token type being sent
-		* @param amount_ the amount of tokens being sent
-		*/
-		function _mint(address recipient_, uint256 id_, uint256 amount_) internal {
-			unchecked {
-				remainingSupplies[id_] -= amount_;
-				_balances[id_][recipient_] += amount_;
-			}
-			emit TransferSingle(recipient_, address(0), recipient_, id_, amount_);
-		}
+  // **************************************
+  // *****          INTERNAL          *****
+  // **************************************
+    /**
+    * @dev Internal function that checks if the receiver address is able to handle batches of IERC1155 tokens.
+    * 
+    * @param operator_ address sending the transaction
+    * @param from_ address from where the tokens are sent
+    * @param to_ address receiving the tokens
+    * @param ids_ list of token types being sent
+    * @param amounts_ list of amounts of tokens being sent
+    * @param data_ additional data to accompany the call
+    */
+    function _doSafeBatchTransferAcceptanceCheck(
+      address operator_,
+      address from_,
+      address to_,
+      uint256[] memory ids_,
+      uint256[] memory amounts_,
+      bytes memory data_
+    ) private {
+      uint256 _size_;
+      assembly {
+        _size_ := extcodesize(to_)
+      }
+      if (_size_ > 0) {
+        try IERC1155Receiver(to_).onERC1155BatchReceived(operator_, from_, ids_, amounts_, data_) returns (bytes4 retval) {
+          if (retval != IERC1155Receiver.onERC1155BatchReceived.selector) {
+            revert IERC1155_REJECTED_TRANSFER();
+          }
+        }
+        catch (bytes memory reason) {
+          if (reason.length == 0) {
+            revert IERC1155_REJECTED_TRANSFER();
+          }
+          else {
+            assembly {
+              revert(add(32, reason), mload(reason))
+            }
+          }
+        }
+      }
+    }
+    /**
+    * @dev Internal function that checks if the receiver address is able to handle IERC1155 tokens.
+    * 
+    * @param operator_ address sending the transaction
+    * @param from_ address from where the tokens are sent
+    * @param to_ address receiving the tokens
+    * @param id_ the token type being sent
+    * @param amount_ the amount of tokens being sent
+    * @param data_ additional data to accompany the call
+    */
+    function _doSafeTransferAcceptanceCheck(
+      address operator_,
+      address from_,
+      address to_,
+      uint256 id_,
+      uint256 amount_,
+      bytes memory data_
+    ) private {
+      uint256 _size_;
+      assembly {
+        _size_ := extcodesize(to_)
+      }
+      if (_size_ > 0) {
+        try IERC1155Receiver(to_).onERC1155Received(operator_, from_, id_, amount_, data_) returns (bytes4 retval) {
+          if (retval != IERC1155Receiver.onERC1155Received.selector) {
+            revert IERC1155_REJECTED_TRANSFER();
+          }
+        }
+        catch (bytes memory reason) {
+          if (reason.length == 0) {
+            revert IERC1155_REJECTED_TRANSFER();
+          }
+          else {
+            assembly {
+              revert(add(32, reason), mload(reason))
+            }
+          }
+        }
+      }
+    }
+    /**
+    * @dev Internal function that checks if `operator_` is allowed to manage tokens on behalf of `owner_`
+    * 
+    * @param owner_ address owning the tokens
+    * @param operator_ address to check approval for
+    */
+    function _isApprovedOrOwner(address owner_, address operator_) internal view returns (bool) {
+      return owner_ == operator_ || isApprovedForAll(owner_, operator_);
+    }
+    /**
+    * @dev Internal function that checks whether `id_` is an existing series.
+    * 
+    * @param id_ the token type being verified
+    */
+    function _isValidSeries(uint256 id_) internal view returns (bool) {
+      return BitMaps.get(_validSeries, id_);
+    }
+    /**
+    * @dev Internal function that mints `amount_` tokens from series `id_` into `recipient_`.
+    * 
+    * @param recipient_ the address receiving the tokens
+    * @param id_ the token type being sent
+    * @param amount_ the amount of tokens being sent
+    */
+    function _mint(address recipient_, uint256 id_, uint256 amount_) internal {
+      unchecked {
+        remainingSupplies[id_] -= amount_;
+        _balances[id_][recipient_] += amount_;
+      }
+      emit TransferSingle(recipient_, address(0), recipient_, id_, amount_);
+    }
     /**
     * @dev Converts a `uint256` to its ASCII `string` decimal representation.
     * 
@@ -249,345 +249,345 @@ UpdatableOperatorFilterer, ERC2981, ERC173 {
         mstore(str, length)
       }
     }
-	// **************************************
+  // **************************************
 
-	// **************************************
-	// *****           PUBLIC           *****
-	// **************************************
-		// ********
-		// * Dexa *
-		// ********
-			/**
-			* @notice Mints `qty_` amount of `id_` to the caller address.
-			* 
-			* @param id_ the series id to mint 
-			* @param qty_ amount of tokens to mint
-			* @param recipient_ address receiving the tokens
-			* 
-			* Requirements:
-			* 
-			* - `id_` must be a valid series
-			* - Caller must be allowed to mint tokens
-			*/
-			function mintTo(uint256 id_, uint256 qty_, address recipient_)
-			external
-			isValidSeries(id_)
-			isMinter(msg.sender, id_) {
-				if (qty_ > remainingSupplies[id_]) {
-					revert NFT_MAX_SUPPLY(qty_, remainingSupplies[id_]);
-				}
-				_mint(recipient_, id_, qty_);
-			}
-		// ********
+  // **************************************
+  // *****           PUBLIC           *****
+  // **************************************
+    // ********
+    // * Dexa *
+    // ********
+      /**
+      * @notice Mints `qty_` amount of `id_` to the caller address.
+      * 
+      * @param id_ the series id to mint 
+      * @param qty_ amount of tokens to mint
+      * @param recipient_ address receiving the tokens
+      * 
+      * Requirements:
+      * 
+      * - `id_` must be a valid series
+      * - Caller must be allowed to mint tokens
+      */
+      function mintTo(uint256 id_, uint256 qty_, address recipient_)
+      external
+      isValidSeries(id_)
+      isMinter(msg.sender, id_) {
+        if (qty_ > remainingSupplies[id_]) {
+          revert NFT_MAX_SUPPLY(qty_, remainingSupplies[id_]);
+        }
+        _mint(recipient_, id_, qty_);
+      }
+    // ********
 
-		// ************
-		// * IERC1155 *
-		// ************
-			/**
-			* @notice Transfers `amounts_` amount(s) of `ids_` from the `from_` address to the `to_` address specified (with safety call).
-			* 
-			* @param from_ Source address
-			* @param to_ Target address
-			* @param ids_ IDs of each token type (order and length must match `amounts_` array)
-			* @param amounts_ Transfer amounts per token type (order and length must match `ids_` array)
-			* @param data_ Additional data with no specified format, MUST be sent unaltered in call to the `ERC1155TokenReceiver` hook(s) on `to_`
-			* 
-			* Requirements:
-			* 
-			* - Caller must be approved to manage the tokens being transferred out of the `from_` account (see "Approval" section of the standard).
-			* - MUST revert if `to_` is the zero address.
-			* - MUST revert if length of `ids_` is not the same as length of `amounts_`.
-			* - MUST revert if any of the balance(s) of the holder(s) for token(s) in `ids_` is lower than the respective amount(s) in `amounts_` sent to the recipient.
-			* - MUST revert on any other error.        
-			* - MUST emit `TransferSingle` or `TransferBatch` event(s) such that all the balance changes are reflected (see "Safe Transfer Rules" section of the standard).
-			* - Balance changes and events MUST follow the ordering of the arrays (_ids[0]/_amounts[0] before ids_[1]/_amounts[1], etc).
-			* - After the above conditions for the transfer(s) in the batch are met, this function MUST check if `to_` is a smart contract (e.g. code size > 0). If so, it MUST call the relevant `ERC1155TokenReceiver` hook(s) on `to_` and act appropriately (see "Safe Transfer Rules" section of the standard).                      
-			*/
-			function safeBatchTransferFrom(
-				address from_,
-				address to_,
-				uint256[] calldata ids_,
-				uint256[] calldata amounts_,
-				bytes calldata data_
-			) external override onlyAllowedOperator(msg.sender) {
-				if (to_ == address(0)) {
-					revert IERC1155_INVALID_TRANSFER();
-				}
-				uint256 _len_ = ids_.length;
-				if (amounts_.length != _len_) {
-					revert ARRAY_LENGTH_MISMATCH();
-				}
-				address _operator_ = msg.sender;
-				if (! _isApprovedOrOwner(from_, _operator_)) {
-					revert IERC1155_CALLER_NOT_APPROVED(from_, _operator_);
-				}
-				for (uint256 i; i < _len_;) {
-					if (! _isValidSeries(ids_[i])) {
-						continue;
-					}
-					uint256 _balance_ = _balances[ids_[i]][from_];
-					if (_balance_ < amounts_[i]) {
-						revert IERC1155_INSUFFICIENT_BALANCE(from_, ids_[i], _balance_);
-					}
-					unchecked {
-						_balances[ids_[i]][from_] = _balance_ - amounts_[i];
-					}
-					_balances[ids_[i]][to_] += amounts_[i];
-					unchecked {
-						++i;
-					}
-				}
-				emit TransferBatch(_operator_, from_, to_, ids_, amounts_);
+    // ************
+    // * IERC1155 *
+    // ************
+      /**
+      * @notice Transfers `amounts_` amount(s) of `ids_` from the `from_` address to the `to_` address specified (with safety call).
+      * 
+      * @param from_ Source address
+      * @param to_ Target address
+      * @param ids_ IDs of each token type (order and length must match `amounts_` array)
+      * @param amounts_ Transfer amounts per token type (order and length must match `ids_` array)
+      * @param data_ Additional data with no specified format, MUST be sent unaltered in call to the `ERC1155TokenReceiver` hook(s) on `to_`
+      * 
+      * Requirements:
+      * 
+      * - Caller must be approved to manage the tokens being transferred out of the `from_` account (see "Approval" section of the standard).
+      * - MUST revert if `to_` is the zero address.
+      * - MUST revert if length of `ids_` is not the same as length of `amounts_`.
+      * - MUST revert if any of the balance(s) of the holder(s) for token(s) in `ids_` is lower than the respective amount(s) in `amounts_` sent to the recipient.
+      * - MUST revert on any other error.        
+      * - MUST emit `TransferSingle` or `TransferBatch` event(s) such that all the balance changes are reflected (see "Safe Transfer Rules" section of the standard).
+      * - Balance changes and events MUST follow the ordering of the arrays (_ids[0]/_amounts[0] before ids_[1]/_amounts[1], etc).
+      * - After the above conditions for the transfer(s) in the batch are met, this function MUST check if `to_` is a smart contract (e.g. code size > 0). If so, it MUST call the relevant `ERC1155TokenReceiver` hook(s) on `to_` and act appropriately (see "Safe Transfer Rules" section of the standard).                      
+      */
+      function safeBatchTransferFrom(
+        address from_,
+        address to_,
+        uint256[] calldata ids_,
+        uint256[] calldata amounts_,
+        bytes calldata data_
+      ) external override onlyAllowedOperator(msg.sender) {
+        if (to_ == address(0)) {
+          revert IERC1155_INVALID_TRANSFER();
+        }
+        uint256 _len_ = ids_.length;
+        if (amounts_.length != _len_) {
+          revert ARRAY_LENGTH_MISMATCH();
+        }
+        address _operator_ = msg.sender;
+        if (! _isApprovedOrOwner(from_, _operator_)) {
+          revert IERC1155_CALLER_NOT_APPROVED(from_, _operator_);
+        }
+        for (uint256 i; i < _len_;) {
+          if (! _isValidSeries(ids_[i])) {
+            continue;
+          }
+          uint256 _balance_ = _balances[ids_[i]][from_];
+          if (_balance_ < amounts_[i]) {
+            revert IERC1155_INSUFFICIENT_BALANCE(from_, ids_[i], _balance_);
+          }
+          unchecked {
+            _balances[ids_[i]][from_] = _balance_ - amounts_[i];
+          }
+          _balances[ids_[i]][to_] += amounts_[i];
+          unchecked {
+            ++i;
+          }
+        }
+        emit TransferBatch(_operator_, from_, to_, ids_, amounts_);
 
-				_doSafeBatchTransferAcceptanceCheck(_operator_, from_, to_, ids_, amounts_, data_);
-			}
+        _doSafeBatchTransferAcceptanceCheck(_operator_, from_, to_, ids_, amounts_, data_);
+      }
 
-			/**
-			* @notice Transfers `amount_` amount of an `id_` from the `from_` address to the `to_` address specified (with safety call).
-			* 
-			* @param from_ Source address
-			* @param to_ Target address
-			* @param id_ ID of the token type
-			* @param amount_ Transfer amount
-			* @param data_ Additional data with no specified format, MUST be sent unaltered in call to `onERC1155Received` on `to_`
-			* 
-			* Requirements:
-			* 
-			* - Caller must be approved to manage the tokens being transferred out of the `from_` account (see "Approval" section of the standard).
-			* - MUST revert if `to_` is the zero address.
-			* - MUST revert if balance of holder for token type `id_` is lower than the `amount_` sent.
-			* - MUST revert on any other error.
-			* - MUST emit the `TransferSingle` event to reflect the balance change (see "Safe Transfer Rules" section of the standard).
-			* - After the above conditions are met, this function MUST check if `to_` is a smart contract (e.g. code size > 0). If so, it MUST call `onERC1155Received` on `to_` and act appropriately (see "Safe Transfer Rules" section of the standard).        
-			*/
-			function safeTransferFrom(
-				address from_,
-				address to_,
-				uint256 id_,
-				uint256 amount_,
-				bytes calldata data_
-			) external override isValidSeries(id_) onlyAllowedOperator(msg.sender) {
-				if (to_ == address(0)) {
-					revert IERC1155_INVALID_TRANSFER();
-				}
-				address _operator_ = msg.sender;
-				if (! _isApprovedOrOwner(from_, _operator_)) {
-					revert IERC1155_CALLER_NOT_APPROVED(from_, _operator_);
-				}
-				uint256 _balance_ = _balances[id_][from_];
-				if (_balance_ < amount_) {
-					revert IERC1155_INSUFFICIENT_BALANCE(from_, id_, _balance_);
-				}
-				unchecked {
-					_balances[id_][from_] = _balance_ - amount_;
-				}
-				_balances[id_][to_] += amount_;
-				emit TransferSingle(_operator_, from_, to_, id_, amount_);
-				_doSafeTransferAcceptanceCheck(_operator_, from_, to_, id_, amount_, data_);
-			}
-			/**
-			* @notice Enable or disable approval for a third party ("operator") to manage all of the caller's tokens.
-			* 
-			* @param operator_ Address to add to the set of authorized operators
-			* @param approved_ True if the operator is approved, false to revoke approval
-			* 
-			* Requirements:
-			* 
-			* - MUST emit the ApprovalForAll event on success.
-			*/
-			function setApprovalForAll(address operator_, bool approved_)
-			external
-			override
-			onlyAllowedOperatorApproval(msg.sender) {
-				address _tokenOwner_ = msg.sender;
-				if (_tokenOwner_ == operator_) {
-					revert IERC1155_INVALID_CALLER_APPROVAL();
-				}
-				_operatorApprovals[_tokenOwner_][operator_] = approved_;
-				emit ApprovalForAll(_tokenOwner_, operator_, approved_);
-			}
-		// ************
-	// **************************************
+      /**
+      * @notice Transfers `amount_` amount of an `id_` from the `from_` address to the `to_` address specified (with safety call).
+      * 
+      * @param from_ Source address
+      * @param to_ Target address
+      * @param id_ ID of the token type
+      * @param amount_ Transfer amount
+      * @param data_ Additional data with no specified format, MUST be sent unaltered in call to `onERC1155Received` on `to_`
+      * 
+      * Requirements:
+      * 
+      * - Caller must be approved to manage the tokens being transferred out of the `from_` account (see "Approval" section of the standard).
+      * - MUST revert if `to_` is the zero address.
+      * - MUST revert if balance of holder for token type `id_` is lower than the `amount_` sent.
+      * - MUST revert on any other error.
+      * - MUST emit the `TransferSingle` event to reflect the balance change (see "Safe Transfer Rules" section of the standard).
+      * - After the above conditions are met, this function MUST check if `to_` is a smart contract (e.g. code size > 0). If so, it MUST call `onERC1155Received` on `to_` and act appropriately (see "Safe Transfer Rules" section of the standard).        
+      */
+      function safeTransferFrom(
+        address from_,
+        address to_,
+        uint256 id_,
+        uint256 amount_,
+        bytes calldata data_
+      ) external override isValidSeries(id_) onlyAllowedOperator(msg.sender) {
+        if (to_ == address(0)) {
+          revert IERC1155_INVALID_TRANSFER();
+        }
+        address _operator_ = msg.sender;
+        if (! _isApprovedOrOwner(from_, _operator_)) {
+          revert IERC1155_CALLER_NOT_APPROVED(from_, _operator_);
+        }
+        uint256 _balance_ = _balances[id_][from_];
+        if (_balance_ < amount_) {
+          revert IERC1155_INSUFFICIENT_BALANCE(from_, id_, _balance_);
+        }
+        unchecked {
+          _balances[id_][from_] = _balance_ - amount_;
+        }
+        _balances[id_][to_] += amount_;
+        emit TransferSingle(_operator_, from_, to_, id_, amount_);
+        _doSafeTransferAcceptanceCheck(_operator_, from_, to_, id_, amount_, data_);
+      }
+      /**
+      * @notice Enable or disable approval for a third party ("operator") to manage all of the caller's tokens.
+      * 
+      * @param operator_ Address to add to the set of authorized operators
+      * @param approved_ True if the operator is approved, false to revoke approval
+      * 
+      * Requirements:
+      * 
+      * - MUST emit the ApprovalForAll event on success.
+      */
+      function setApprovalForAll(address operator_, bool approved_)
+      external
+      override
+      onlyAllowedOperatorApproval(msg.sender) {
+        address _tokenOwner_ = msg.sender;
+        if (_tokenOwner_ == operator_) {
+          revert IERC1155_INVALID_CALLER_APPROVAL();
+        }
+        _operatorApprovals[_tokenOwner_][operator_] = approved_;
+        emit ApprovalForAll(_tokenOwner_, operator_, approved_);
+      }
+    // ************
+  // **************************************
 
-	// **************************************
-	// *****       CONTRACT OWNER       *****
-	// **************************************
-		// ********
-		// * Dexa *
-		// ********
-			/**
-			* @notice Creates a new series
-			* 
-			* @param id_ the new series ID
-			* @param maxSupply_ the new series max supply
-			* 
-			* Requirements:
-			* 
-			* - Caller must be the contract owner
-			* - `id_` must not be a valid series ID
-			*/
-			function createSeries(uint256 id_, uint256 maxSupply_) external onlyOwner {
-				if (BitMaps.get(_validSeries, id_)) {
-					revert IERC1155_EXISTANT_TOKEN(id_);
-				}
-				BitMaps.set(_validSeries, id_);
-				remainingSupplies[id_] = maxSupply_;
-			}
-			/**
-			* @notice Updates an existing series
-			* 
-			* @param id_ the series ID
-			* @param remainingSupply_ the series new remaining supply
-			* 
-			* Requirements:
-			* 
-			* - Caller must be the contract owner
-			* - `id_` must be a valid series ID
-			*/
-			function updateSeries(uint256 id_, uint256 remainingSupply_) external onlyOwner isValidSeries(id_) {
-				remainingSupplies[id_] = remainingSupply_;
-			}
-			/**
-			* @notice Sets the minter of a given series ID
-			* 
-			* @param id_ the series ID to set
-			* @param minter_ the address allowed to mint (address zero to revoke minter status)
-			* 
-			* Requirements:
-			* 
-			* - Caller must be the contract owner
-			* - `id_` must be a valid series ID
-			*/
-			function setMinter(uint256 id_, address minter_) external onlyOwner isValidSeries(id_) {
-				minters[id_] = minter_;
-			}
-			/**
-			* @notice Updates the royalty recipient and rate.
-			* 
-			* @param royaltyRecipient_ the new recipient of the royalties
-			* @param royaltyRate_ the new royalty rate
-			* 
-			* Requirements:
-			* 
-			* - Caller must be the contract owner
-			* - `royaltyRate_` must be between 0 and 10,000
-			*/
-			function setRoyaltyInfo(address royaltyRecipient_, uint256 royaltyRate_) external onlyOwner {
-				_setRoyaltyInfo(royaltyRecipient_, royaltyRate_);
-			}
-			/**
-			* @notice Sets the uri of the tokens.
-			* 
-			* @param uri_ The new uri of the tokens
-			*/
-			function setURI(string memory uri_) external onlyOwner {
-				_uri = uri_;
-				emit URI(uri_, DEFAULT_SERIES_ID);
-			}
-		// ********
-	// **************************************
+  // **************************************
+  // *****       CONTRACT OWNER       *****
+  // **************************************
+    // ********
+    // * Dexa *
+    // ********
+      /**
+      * @notice Creates a new series
+      * 
+      * @param id_ the new series ID
+      * @param maxSupply_ the new series max supply
+      * 
+      * Requirements:
+      * 
+      * - Caller must be the contract owner
+      * - `id_` must not be a valid series ID
+      */
+      function createSeries(uint256 id_, uint256 maxSupply_) external onlyOwner {
+        if (BitMaps.get(_validSeries, id_)) {
+          revert IERC1155_EXISTANT_TOKEN(id_);
+        }
+        BitMaps.set(_validSeries, id_);
+        remainingSupplies[id_] = maxSupply_;
+      }
+      /**
+      * @notice Updates an existing series
+      * 
+      * @param id_ the series ID
+      * @param remainingSupply_ the series new remaining supply
+      * 
+      * Requirements:
+      * 
+      * - Caller must be the contract owner
+      * - `id_` must be a valid series ID
+      */
+      function updateSeries(uint256 id_, uint256 remainingSupply_) external onlyOwner isValidSeries(id_) {
+        remainingSupplies[id_] = remainingSupply_;
+      }
+      /**
+      * @notice Sets the minter of a given series ID
+      * 
+      * @param id_ the series ID to set
+      * @param minter_ the address allowed to mint (address zero to revoke minter status)
+      * 
+      * Requirements:
+      * 
+      * - Caller must be the contract owner
+      * - `id_` must be a valid series ID
+      */
+      function setMinter(uint256 id_, address minter_) external onlyOwner isValidSeries(id_) {
+        minters[id_] = minter_;
+      }
+      /**
+      * @notice Updates the royalty recipient and rate.
+      * 
+      * @param royaltyRecipient_ the new recipient of the royalties
+      * @param royaltyRate_ the new royalty rate
+      * 
+      * Requirements:
+      * 
+      * - Caller must be the contract owner
+      * - `royaltyRate_` must be between 0 and 10,000
+      */
+      function setRoyaltyInfo(address royaltyRecipient_, uint256 royaltyRate_) external onlyOwner {
+        _setRoyaltyInfo(royaltyRecipient_, royaltyRate_);
+      }
+      /**
+      * @notice Sets the uri of the tokens.
+      * 
+      * @param uri_ The new uri of the tokens
+      */
+      function setURI(string memory uri_) external onlyOwner {
+        _uri = uri_;
+        emit URI(uri_, DEFAULT_SERIES_ID);
+      }
+    // ********
+  // **************************************
 
-	// **************************************
-	// *****            VIEW            *****
-	// **************************************
-		// ***********
-		// * IERC165 *
-		// ***********
-			/**
-			* @notice Query if a contract implements an interface.
-			* @dev Interface identification is specified in ERC-165. This function uses less than 30,000 gas.
-			* 
-			* @param interfaceID_ the interface identifier, as specified in ERC-165
-			* 
-			* @return TRUE if the contract implements `interfaceID_` and `interfaceID_` is not 0xffffffff, FALSE otherwise
-			*/
-			function supportsInterface(bytes4 interfaceID_) public pure override returns (bool) {
-				return 
-					interfaceID_ == type(IERC165).interfaceId ||
-					interfaceID_ == type(IERC173).interfaceId ||
-					interfaceID_ == type(IERC1155).interfaceId ||
-					interfaceID_ == type(IERC1155MetadataURI).interfaceId ||
-					interfaceID_ == type(IERC2981).interfaceId;
-			}
-		// ***********
+  // **************************************
+  // *****            VIEW            *****
+  // **************************************
+    // ***********
+    // * IERC165 *
+    // ***********
+      /**
+      * @notice Query if a contract implements an interface.
+      * @dev Interface identification is specified in ERC-165. This function uses less than 30,000 gas.
+      * 
+      * @param interfaceID_ the interface identifier, as specified in ERC-165
+      * 
+      * @return TRUE if the contract implements `interfaceID_` and `interfaceID_` is not 0xffffffff, FALSE otherwise
+      */
+      function supportsInterface(bytes4 interfaceID_) public pure override returns (bool) {
+        return 
+          interfaceID_ == type(IERC165).interfaceId ||
+          interfaceID_ == type(IERC173).interfaceId ||
+          interfaceID_ == type(IERC1155).interfaceId ||
+          interfaceID_ == type(IERC1155MetadataURI).interfaceId ||
+          interfaceID_ == type(IERC2981).interfaceId;
+      }
+    // ***********
 
-		// ***********
-		// * IERC173 *
-		// ***********
-			/**
-			* @dev returns the contract owner.
-			*/
-			function owner() public view override(ERC173, UpdatableOperatorFilterer) returns (address) {
-				return ERC173.owner();
-			}
-		// ***********
+    // ***********
+    // * IERC173 *
+    // ***********
+      /**
+      * @dev returns the contract owner.
+      */
+      function owner() public view override(ERC173, UpdatableOperatorFilterer) returns (address) {
+        return ERC173.owner();
+      }
+    // ***********
 
-		// ************
-		// * IERC1155 *
-		// ************
-			/**
-			* @notice Get the balance of an account's tokens.
-			* 
-			* @param owner_ the address of the token holder
-			* @param id_ ID of the token type
-			* 
-			* @return `owner_`'s balance of the token type requested
-			*/
-			function balanceOf(address owner_, uint256 id_) public view override isValidSeries(id_) returns (uint256) {
-				return _balances[id_][owner_];
-			}
-			/**
-			* @notice Get the balance of multiple account/token pairs
-			* 
-			* @param owners_ the addresses of the token holders
-			* @param ids_ ID of the token types
-			* 
-			* @return the `owners_`' balance of the token types requested (i.e. balance for each (owner, id) pair)
-			*/
-			function balanceOfBatch(address[] calldata owners_, uint256[] calldata ids_)
-			public
-			view
-			override
-			returns (uint256[] memory) {
-				uint256 _len_ = owners_.length;
-				if (_len_ != ids_.length) {
-					revert ARRAY_LENGTH_MISMATCH();
-				}
-				uint256[] memory _balances_ = new uint256[](_len_);
-				while (_len_ > 0) {
-					unchecked {
-						--_len_;
-					}
-					if (! _isValidSeries(ids_[_len_])) {
-						_balances_[_len_] = 0;
-						continue;
-					}
-					_balances_[_len_] = _balances[ids_[_len_]][owners_[_len_]];
-				}
-				return _balances_;
-			}
-			/**
-			* @notice Queries the approval status of an operator for a given owner.
-			* 
-			* @param owner_ the owner of the tokens
-			* @param operator_ address of authorized operator
-			* 
-			* @return TRUE if the operator is approved, FALSE if not
-			*/
-			function isApprovedForAll(address owner_, address operator_) public view override returns (bool) {
-				return _operatorApprovals[owner_][operator_];
-			}
-		// ************
+    // ************
+    // * IERC1155 *
+    // ************
+      /**
+      * @notice Get the balance of an account's tokens.
+      * 
+      * @param owner_ the address of the token holder
+      * @param id_ ID of the token type
+      * 
+      * @return `owner_`'s balance of the token type requested
+      */
+      function balanceOf(address owner_, uint256 id_) public view override isValidSeries(id_) returns (uint256) {
+        return _balances[id_][owner_];
+      }
+      /**
+      * @notice Get the balance of multiple account/token pairs
+      * 
+      * @param owners_ the addresses of the token holders
+      * @param ids_ ID of the token types
+      * 
+      * @return the `owners_`' balance of the token types requested (i.e. balance for each (owner, id) pair)
+      */
+      function balanceOfBatch(address[] calldata owners_, uint256[] calldata ids_)
+      public
+      view
+      override
+      returns (uint256[] memory) {
+        uint256 _len_ = owners_.length;
+        if (_len_ != ids_.length) {
+          revert ARRAY_LENGTH_MISMATCH();
+        }
+        uint256[] memory _balances_ = new uint256[](_len_);
+        while (_len_ > 0) {
+          unchecked {
+            --_len_;
+          }
+          if (! _isValidSeries(ids_[_len_])) {
+            _balances_[_len_] = 0;
+            continue;
+          }
+          _balances_[_len_] = _balances[ids_[_len_]][owners_[_len_]];
+        }
+        return _balances_;
+      }
+      /**
+      * @notice Queries the approval status of an operator for a given owner.
+      * 
+      * @param owner_ the owner of the tokens
+      * @param operator_ address of authorized operator
+      * 
+      * @return TRUE if the operator is approved, FALSE if not
+      */
+      function isApprovedForAll(address owner_, address operator_) public view override returns (bool) {
+        return _operatorApprovals[owner_][operator_];
+      }
+    // ************
 
-		// ***********************
-		// * IERC1155MetadataURI *
-		// ***********************
-			/**
-			* @dev Returns the URI for token type `id`.
-			*/
-			function uri(uint256 id_) external view isValidSeries(id_) returns (string memory) {
-				return bytes(_uri).length > 0 ? string(abi.encodePacked(_uri, _toString(id_))) : _toString(id_);
-			}
-		// ***********************
-	// **************************************
+    // ***********************
+    // * IERC1155MetadataURI *
+    // ***********************
+      /**
+      * @dev Returns the URI for token type `id`.
+      */
+      function uri(uint256 id_) external view isValidSeries(id_) returns (string memory) {
+        return bytes(_uri).length > 0 ? string(abi.encodePacked(_uri, _toString(id_))) : _toString(id_);
+      }
+    // ***********************
+  // **************************************
 }
